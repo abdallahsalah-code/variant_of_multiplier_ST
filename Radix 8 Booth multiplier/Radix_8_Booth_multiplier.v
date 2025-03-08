@@ -28,8 +28,8 @@ module Radix_8_Booth_multiplier #(parameter n = 32)(
     output reg signed [2*n-1:0] product
 );
     // --- Local Parameters ---
-    localparam i = (n%3 == 2) ? n : ((n%3 == 0) ? n-1 : n+1);
-    localparam k = (n%3 == 0) ? 1 : 0;
+    localparam i = (n%3 == 2) ? n : ((n%3 == 0) ? n-1 : n+1); //to determine the starting point of the lower half shifting
+    localparam k = (n%3 == 0) ? 1 : 0; //sign extend of the upper half product or not
 
     // --- Internal Signals ---
     wire [n+1:0] part, tx, sout, cout;
@@ -40,7 +40,7 @@ module Radix_8_Booth_multiplier #(parameter n = 32)(
     reg ff;
     wire [3:0] add_3b;
     assign tx = (x << 1) + x;  // Precompute 3x
-    assign add_3b = sum[2:0] + {carry[1:0], ff};
+    assign add_3b = sum[2:0] + {carry[1:0], ff}; //3-bit adder 
 
     // --- Submodules ---
     booth #(n) u2(
@@ -57,13 +57,14 @@ module Radix_8_Booth_multiplier #(parameter n = 32)(
     );
     
     // --- Final Sum Logic ---
-    assign fsum = {{1{sum[n+1]}}, sum[n+1:3]} + carry[n+1:2] + add_3b[3];
+    assign fsum = {{1{sum[n+1]}}, sum[n+1:3]} + carry[n+1:2] + add_3b[3]; //loaded into product reg every rising edge
 
     // --- Control Logic ---
     //reg [$clog2(n/3):0] count; //control logic exist if needed
     
     always @(posedge clk or negedge rst) begin
         if (!rst) begin
+            //////////// reset the regesiters of the circuit/////////////
             mplier <= {y, 1'b0};
             mcand <= x;
             sum <= 0;
@@ -72,6 +73,7 @@ module Radix_8_Booth_multiplier #(parameter n = 32)(
             product <= 0;
            // count <= (n + 5)/3;
         end else begin
+            //////////// the partial product processing ////////////////
             //count <= count - 1;
             mplier <= mplier >>> 3;
             sum <= sout;
